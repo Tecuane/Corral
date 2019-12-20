@@ -6,8 +6,6 @@ A dead-simple, quite-opinionated RBAC library for web applications.
 
 Roughly similar to the basics of [CanCanCan](https://github.com/cancancommunity/cancancan) for Rails.
 
-The library code is messy and brittle. Check the test for example usage.
-
 ## Overview
 
 Corral operates around the concept of subjects and objects. A subject is an entity that may perform an action, an an object is an entity that may have an action performed upon it.
