@@ -1,12 +1,15 @@
 package corral
 
 import (
-	"testing"
-)
+	"testing")
 
 type Role struct {
 	ID int64
 	Name string
+}
+
+func (r *Role) SubjectKey() string {
+	return string(r.ID)
 }
 
 type Profile struct {
@@ -20,6 +23,10 @@ type Post struct {
 	ProfileID int64
 	Title string
 	Hidden bool
+}
+
+func (p *Post) ObjectType() string {
+	return "post"
 }
 
 // Returns the ID of the post's owner.
@@ -48,9 +55,17 @@ func TestNoPermissions(t *testing.T) {
 	}
 }
 
-func TestAdminCanDoAnything(t *testing.T) {
+func BenchmarkNoPermissions(b *testing.B) {
+	for _, post := range testPosts {
+		if Can(userRole, post, ReadAction) {
+			b.Fatalf("Was able to perform an action without permissions.")
+		}
+	}
+}
+
+func TestFullCRUD(t *testing.T) {
 	defer Reset()
-	Authorize(adminRole, &Post{}, ManageAction)
+	Authorize(adminRole.SubjectKey(), "post", ManageAction)
 
 	for _, post := range testPosts {
 		if Cannot(adminProfile.Role, post, CreateAction) {
@@ -71,6 +86,45 @@ func TestAdminCanDoAnything(t *testing.T) {
 	}
 }
 
+func BenchmarkFullCRUD(b *testing.B) {
+	defer Reset()
+	Authorize(adminRole.SubjectKey(), "post", ManageAction)
+
+	for _, post := range testPosts {
+		if Cannot(adminProfile.Role, post, CreateAction) {
+			b.Fatalf("Admin was marked as manage, but cannot create.")
+		}
+
+		if Cannot(adminProfile.Role, post, ReadAction) {
+			b.Fatalf("Admin was marked as manage, but cannot read.")
+		}
+
+		if Cannot(adminProfile.Role, post, UpdateAction) {
+			b.Fatalf("Admin was marked as manage, but cannot update.")
+		}
+
+		if Cannot(adminProfile.Role, post, DeleteAction) {
+			b.Fatalf("Admin was marked as manage, but cannot delete.")
+		}
+
+		if Can(userProfile.Role, post, CreateAction) {
+			b.Fatalf("User was not authorized, but can create.")
+		}
+
+		if Can(userProfile.Role, post, ReadAction) {
+			b.Fatalf("User was not authorized, but can read.")
+		}
+
+		if Can(userProfile.Role, post, UpdateAction) {
+			b.Fatalf("User was not authorized, but can update.")
+		}
+
+		if Can(userProfile.Role, post, DeleteAction) {
+			b.Fatalf("User was not authorized, but can delete.")
+		}
+	}
+}
+
 // Returns false if the post is hidden.
 func notHidden(profile interface{}, post interface{}) bool {
 	return !post.(*Post).Hidden
@@ -81,9 +135,9 @@ func owned(profile interface{}, post interface{}) bool {
 	return post.(*Post).ProfileID == profile.(*Profile).ID
 }
 
-func TestUserCannotReadHidden(t *testing.T) {
+func TestUserComplex(t *testing.T) {
 	defer Reset()
-	ConditionalAuthorize(userRole, &Post{}, ReadAction, notHidden)
+	ConditionalAuthorize(userRole.SubjectKey(), "post", ReadAction, notHidden)
 
 	if Cannot(userProfile.Role, testPosts[0], ReadAction) {
 		t.Fatalf("User was allowed to read all posts but cannot read.")
@@ -102,24 +156,24 @@ func TestUserCannotReadHidden(t *testing.T) {
 	}
 }
 
-func TestUserCannotCreate(t *testing.T) {
+func BenchmarkUserComplex(b *testing.B) {
 	defer Reset()
-	ConditionalAuthorize(userRole, &Post{}, ReadAction, notHidden)
+	ConditionalAuthorize(userRole.SubjectKey(), "post", ReadAction, notHidden)
+	ConditionalAuthorize(userRole.SubjectKey(), "post", UpdateAction, owned)
 
-	if Can(userProfile.Role, &Post{}, CreateAction) {
-		t.Fatalf("User could create a post.")
-	}
-}
-
-func TestAdminCanCreate(t *testing.T) {
-	Reset()
-	Authorize(adminRole, &Post{}, CreateAction)
-
-	if Can(userProfile.Role, &Post{}, CreateAction) {
-		t.Fatalf("User could create a post.")
+	if Cannot(userProfile.Role, testPosts[0], ReadAction) {
+		b.Fatalf("User was allowed to read all posts but cannot read.")
 	}
 
-	if Cannot(adminProfile.Role, &Post{}, CreateAction) {
-		t.Fatalf("Admin could not create a post.")
+	if Cannot(userProfile.Role, testPosts[1], ReadAction) {
+		b.Fatalf("User was allowed to read all posts but cannot read.")
+	}
+
+	if Can(userProfile.Role, testPosts[2], ReadAction) {
+		b.Fatalf("User was allowed to read a post they shouldn't be able to see.")
+	}
+
+	if Can(userProfile.Role, testPosts[3], ReadAction) {
+		b.Fatalf("User was allowed to read a post they shouldn't be able to see.")
 	}
 }

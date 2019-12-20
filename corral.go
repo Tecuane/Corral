@@ -1,17 +1,12 @@
 package corral
 
-import (
-	"reflect"
-	"strings"
-)
-
 // ConditionFunc is a function that returns a bool representing whether or not the subject meets some pre-defined criteria on the object.
 type ConditionFunc func(subject interface{}, object interface{}) bool
 
 // Permission is the core permission struct.
 type Permission struct {
-	// SubjectID is the ID of the entity that may perform an action on an object.
-	SubjectID int
+	// SubjectKey is the ID of the entity that may perform an action on an object.
+	SubjectKey string
 	// ObjectType is the name of the entity that may have an action performed on it.
 	ObjectType string
 	// Action is an individual CRUDM action.
@@ -20,12 +15,12 @@ type Permission struct {
 	Condition ConditionFunc
 }
 
-type subjectWithIDMethod interface {
-	ID() int
+type subjectWithKeyMethod interface {
+	SubjectKey() string
 }
 
-type subjectWithSubjectIDMethod interface {
-	SubjectID() int
+type objectWithObjectType interface {
+	ObjectType() string
 }
 
 // Permissions is a simple helper for a slice of Permission structs.
@@ -50,24 +45,21 @@ func noConditionFunc(subject interface{}, object interface{}) bool {
 }
 
 func getTypeString(v interface{}) string {
-	return strings.TrimPrefix(reflect.TypeOf(v).String(), "*")
+	withObjectTypeMethod, ok := v.(objectWithObjectType)
+	if ok {
+		return withObjectTypeMethod.ObjectType()
+	}
+
+	return ""
 }
 
-func getSubjectID(v interface{}) int {
-	withIDMethod, ok := v.(subjectWithIDMethod)
+func getSubjectKey(v interface{}) string {
+	subjectWithKeyMethod, ok := v.(subjectWithKeyMethod)
 	if ok {
-		return withIDMethod.ID()
+		return subjectWithKeyMethod.SubjectKey()
 	}
 
-	withSubjectIDMethod, ok := v.(subjectWithSubjectIDMethod)
-	if ok {
-		return withSubjectIDMethod.SubjectID()
-	}
-
-	subjV := reflect.ValueOf(v)
-	id := reflect.Indirect(subjV).FieldByName("ID")
-
-	return int(id.Int())
+	return ""
 }
 
 // Reset purges the permission set.
@@ -77,10 +69,10 @@ func Reset() {
 
 // Authorize adds a permission allowing the `subject` Subject to perform the `action` Action on the `object` Object.
 // The `conditionFunc` condition allows for more granular checks, such as ensuring the object is owned by the subject.
-func ConditionalAuthorize(subject interface{}, object interface{}, action Action, conditionFunc ConditionFunc) {
+func ConditionalAuthorize(subjectKey string, objectType string, action Action, conditionFunc ConditionFunc) {
 	permission := Permission{
-		SubjectID: getSubjectID(subject),
-		ObjectType: getTypeString(object),
+		SubjectKey: subjectKey,
+		ObjectType: objectType,
 		Action: action,
 		Condition: conditionFunc,
 	}
@@ -89,8 +81,8 @@ func ConditionalAuthorize(subject interface{}, object interface{}, action Action
 }
 
 // Authorize adds a permission allowing the `subject` Subject to perform the `action` Action on the `object` Object.
-func Authorize(subject interface{}, object interface{}, action Action) {
-	ConditionalAuthorize(subject, object, action, noConditionFunc)
+func Authorize(subjectKey string, objectType string, action Action) {
+	ConditionalAuthorize(subjectKey, objectType, action, noConditionFunc)
 }
 
 // Can checks to see whether the `subject` Subject can perform the `action` Action on the `object` Object.
@@ -100,7 +92,7 @@ func Can(subject interface{}, object interface{}, action Action) bool {
 	}
 
 	for _, permission := range permissionSet {
-		if permission.SubjectID == getSubjectID(subject) && permission.ObjectType == getTypeString(object) {
+		if permission.SubjectKey == getSubjectKey(subject) && permission.ObjectType == getTypeString(object) {
 			if permission.Action == ManageAction {
 				return true
 			}
