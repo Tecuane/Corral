@@ -73,13 +73,13 @@ func main() {
 	var userRole = &Role{ID: 2, Name: "User"}
 
 	// Allow an administrator to do anything with no special conditions.
-	corral.Authorize(adminRole.SubjectKey(), "post", ManageAction)
+	corral.Authorize(adminRole.SubjectKey(), "post", corral.ManageAction)
 
 	// Allow a user to read any post, so long as it is not hidden.
-	corral.ConditionalAuthorize(userRole.SubjectKey(), "post", ReadAction, notHidden)
+	corral.ConditionalAuthorize(userRole.SubjectKey(), "post", corral.ReadAction, notHidden)
 
 	// Allow a user to update any post, so long as it is theirs.
-	corral.ConditionalAuthorize(userRole.SubjectKey(), "post", UpdateAction, ownedByUser)
+	corral.ConditionalAuthorize(userRole.SubjectKey(), "post", corral.UpdateAction, ownedByUser)
 }
 ```
 
