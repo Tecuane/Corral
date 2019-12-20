@@ -73,8 +73,8 @@ func ConditionalAuthorize(subjectKey string, objectType string, action Action, c
 	permission := Permission{
 		SubjectKey: subjectKey,
 		ObjectType: objectType,
-		Action: action,
-		Condition: conditionFunc,
+		Action:     action,
+		Condition:  conditionFunc,
 	}
 
 	permissionSet = append(permissionSet, &permission)
@@ -98,8 +98,8 @@ func Can(subject interface{}, object interface{}, action Action) bool {
 			}
 
 			if permission.Action == action {
-		   		return permission.Condition(subject, object)
-		   	}
+				return permission.Condition(subject, object)
+			}
 		}
 	}
 

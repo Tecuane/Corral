@@ -1,10 +1,11 @@
 package corral
 
 import (
-	"testing")
+	"testing"
+)
 
 type Role struct {
-	ID int64
+	ID   int64
 	Name string
 }
 
@@ -13,16 +14,16 @@ func (r *Role) SubjectKey() string {
 }
 
 type Profile struct {
-	ID int64
+	ID   int64
 	Role *Role
 	Name string
 }
 
 type Post struct {
-	ID int64
+	ID        int64
 	ProfileID int64
-	Title string
-	Hidden bool
+	Title     string
+	Hidden    bool
 }
 
 func (p *Post) ObjectType() string {
@@ -40,11 +41,11 @@ var userRole = &Role{ID: 2, Name: "User"}
 var adminProfile = &Profile{ID: 1000, Role: adminRole, Name: "Administrator Profile"}
 var userProfile = &Profile{ID: 2000, Role: userRole, Name: "User Profile"}
 
-var testPosts = []*Post {
-	&Post{ID: 1, ProfileID: 1, Hidden: false, Title: "Post by Administrator"},
-	&Post{ID: 2, ProfileID: 2, Hidden: false,  Title: "Post by User"},
-	&Post{ID: 3, ProfileID: 1, Hidden: true,  Title: "Hidden Post by Administrator"},
-	&Post{ID: 4, ProfileID: 2, Hidden: true,  Title: "Hidden Post by User"},
+var testPosts = []*Post{
+	{ID: 1, ProfileID: 1, Hidden: false, Title: "Post by Administrator"},
+	{ID: 2, ProfileID: 2, Hidden: false, Title: "Post by User"},
+	{ID: 3, ProfileID: 1, Hidden: true, Title: "Hidden Post by Administrator"},
+	{ID: 4, ProfileID: 2, Hidden: true, Title: "Hidden Post by User"},
 }
 
 func TestNoPermissions(t *testing.T) {
